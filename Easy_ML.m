@@ -54,7 +54,9 @@ function Easy_ML_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for Easy_ML
 handles.output = hObject;
+% Initializing the model selection pop-up list
 set(handles.modeltag, 'String', {'Select Model', 'ANN', 'SVM'});
+% Initializing the model validation pop-up list
 set(handles.cvtag, 'String', {'Cross-Validation', 'K-fold', 'Hold-Out'});
 % Update handles structure
 guidata(hObject, handles);
@@ -79,11 +81,14 @@ function dataloadtag_Callback(hObject, eventdata, handles)
 % hObject    handle to dataloadtag (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+% Load data
 [data, head] = load_data();
 msgbox('Data loaded successfully.', 'Success');
+% Find missing values
 [Nmiss, missMap] = missing_value(data);
 [CatVar, Categories] = isCatVar(data, missMap);
 
+% Saving variables on figure handles
 handles.data = data;
 handles.head = head;
 handles.org_data = data;
@@ -93,14 +98,18 @@ handles.missMap = missMap;
 handles.CatVar = CatVar;
 handles.Categories = Categories;
 
+% Printing data information on screen
 msg = {['# Observations = ' num2str(size(handles.data, 1))];...
         ['# missing values = ' num2str(handles.Nmiss)];...
         ['# Features = ' num2str(length(handles.CatVar))];...
         ['# Categorical = ' num2str(sum(handles.CatVar))];...
         ['# Numeric = ' num2str(sum(handles.CatVar==0))]};
 set(handles.datatexttag, 'String', msg);
+% Update feature list pop-up for processing
 set(handles.featurenamelist, 'String', [{'Select feature'} handles.head]);
+% Update feature list pop-up for target
 set(handles.targettag, 'String', [{'Select target'} handles.head]);
+% Display current feature stats and plot PDF
 featurenamelist_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
@@ -114,29 +123,40 @@ function featurenamelist_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns featurenamelist contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from featurenamelist
+
+% Feature selection index from list. 
+% (-1) to adjust the first entry of dummy text.
 ind = get(handles.featurenamelist, 'Value')-1;
-if ind > 0
-    if handles.CatVar(ind)
+
+if ind > 0 % if feature seleted (not dummy text)
+    if handles.CatVar(ind) % If categorical 
+        % Display # categories and missing values of selected feature
         msg = {['# Categories = ' num2str(length(handles.Categories{ind}))];...
                 ['Missing Values = ' num2str(sum(handles.missMap(:, ind), 1))]};
         set(handles.ftexttag, 'String', msg);
+        % Load feature. Convert categorical feature to dummy encoding for
+        % display purpose.
         Data = handle_CatVar(handles.data(handles.missMap(:, ind)==0, ind),...
                 handles.CatVar(ind), handles.Categories(ind), 1);
+        % Plot PDF of dummy encoded categorical feature
         histogram(cell2mat(Data), 'Normalization', 'pdf');
         xlabel('Categories')
         ylabel('PDF')
     else
         Data = cell2mat(handles.data(handles.missMap(:, ind)==0, ind));
+        % Display first order stats and missing values of selected feature
         msg = {['Mean = ' num2str(mean(Data, 1))];...
                 ['Std = ' num2str(std(Data))];...
                 ['Missing Values = ' num2str(sum(handles.missMap(:, ind), 1))]};
         set(handles.ftexttag, 'String', msg);
+        % Plot PDF of feature
         histogram(Data, 'Normalization', 'pdf');
         ylabel('PDF')
     end
     axis tight
     grid on;
 else
+    % Clear text and axis if no feature selected
     axis(handles.fhisttag)
     cla;
     set(handles.ftexttag, 'String', '');
@@ -160,29 +180,35 @@ function fdelbtntag_Callback(hObject, eventdata, handles)
 % hObject    handle to fdelbtntag (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-ind = get(handles.featurenamelist, 'Value')-1;
-if ind > 0
-    handles.data(:, ind) = [];
-    handles.head(:, ind) = [];
-    handles.missMap(:, ind) = [];
-    handles.Nmiss = sum(sum(handles.missMap, 1), 2);
-    handles.CatVar(:, ind) = [];
-    handles.Categories(:, ind) = [];
 
+% Feature selection index from list. 
+% (-1) to adjust the first entry of dummy text.
+ind = get(handles.featurenamelist, 'Value')-1;
+if ind > 0 % If feature selected (not dummy string)
+    handles.data(:, ind) = []; % Delete feature
+    handles.head(:, ind) = []; % Delete feature head
+    handles.missMap(:, ind) = []; % Delete feature missing value map
+    handles.Nmiss = sum(sum(handles.missMap, 1), 2); % Recalculate missing values
+    handles.CatVar(:, ind) = []; % Delete CatVar status
+    handles.Categories(:, ind) = []; % Delete categories
+% Print new information on screen
     msg = {['# Observations = ' num2str(size(handles.data, 1))];...
         ['# missing values = ' num2str(handles.Nmiss)];...
         ['# Features = ' num2str(length(handles.CatVar))];...
         ['# Categorical = ' num2str(sum(handles.CatVar))];...
         ['# Numeric = ' num2str(sum(handles.CatVar==0))]};
     set(handles.datatexttag, 'String', msg);
-
-    set(handles.featurenamelist, 'String', [{'Select feature'} handles.head]);
+    % Update feature list pop-up for processing
+    set(handles.featurenamelist, 'String', [{'Select feature'} handles.head])
+    % Update feature list pop-up for target
     set(handles.targettag, 'String', [{'Select target'} handles.head]);
     guidata(hObject, handles);
 else
     warndlg('Please select feature to exclude.', 'Warning');
 end
+% reset feature seletion to first entry
 set(handles.featurenamelist, 'Value', 1);
+% Display current feature stats and plot PDF
 featurenamelist_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in resettag.
@@ -190,6 +216,8 @@ function resettag_Callback(hObject, eventdata, handles)
 % hObject    handle to resettag (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+%  Reset all the varaibales and data to unaltered stage
 [Nmiss, missMap] = missing_value(handles.org_data);
 [CatVar, Categories] = isCatVar(handles.org_data, missMap);
 
@@ -199,18 +227,21 @@ handles.Nmiss = Nmiss;
 handles.missMap = missMap;
 handles.CatVar = CatVar;
 handles.Categories = Categories;
-
+% Print new information on screen
 msg = {['# Observations = ' num2str(size(handles.data, 1))];...
         ['# missing values = ' num2str(handles.Nmiss)];...
         ['# Features = ' num2str(length(handles.CatVar))];...
         ['# Categorical = ' num2str(sum(handles.CatVar))];...
         ['# Numeric = ' num2str(sum(handles.CatVar==0))]};
 set(handles.datatexttag, 'String', msg);
-
+% Update feature list pop-up for processing
 set(handles.featurenamelist, 'String', [{'Select feature'} handles.head]);
+% Update feature list pop-up for target
 set(handles.targettag, 'String', [{'Select target'} handles.head]);
 guidata(hObject, handles);
+% reset feature seletion to first entry
 set(handles.featurenamelist, 'Value', 1);
+% Display current feature stats and plot PDF
 featurenamelist_Callback(hObject, eventdata, handles);
 
 % --- Executes on button press in hmissbtntag.
@@ -218,24 +249,30 @@ function hmissbtntag_Callback(hObject, eventdata, handles)
 % hObject    handle to hmissbtntag (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+% Ask user which action to take on missing values
 misshandle = questdlg('How to handle missing values', 'Handle missing values',...
                                         'Exclude', 'Replace', 'Exclude');
 waitfor(misshandle);
-
+% Handles missing values as per user selection
 data = handle_missing(handles.data, handles.missMap, handles.CatVar, misshandle);
-
+% Save the new data
 handles.data = data;
-handles.Nmiss = 0;
-handles.missMap = zeros(size(handles.data));
-handles.hmiss = misshandle;
+% No missing values
+handles.Nmiss = 0; 
+handles.missMap = zeros(size(handles.data)); 
+
+handles.hmiss = misshandle; % Save seletion for (testing)
+% Print new information on screen
 msg = {['# Observations = ' num2str(size(handles.data, 1))];...
         ['# missing values = ' num2str(handles.Nmiss)];...
         ['# Features = ' num2str(length(handles.CatVar))];...
         ['# Categorical = ' num2str(sum(handles.CatVar))];...
         ['# Numeric = ' num2str(sum(handles.CatVar==0))]};
-
 set(handles.datatexttag, 'String', msg);
+% reset feature seletion to first entry
 set(handles.featurenamelist, 'Value', 1);
+% Display current feature stats and plot PDF
 featurenamelist_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
@@ -273,24 +310,32 @@ function modeltag_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns modeltag contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from modeltag
 
+% Model selection index from list. 
+% (-1) to adjust the first entry of dummy text.
 ind  = get(handles.modeltag, 'Value')-1;
 switch ind
     case 1 % ANN
+        % Save model slection type for testing
         Model.type = ind;
+        % Hidden layer structure from edit box
         set(handles.edit1tag, 'String', 'Array of hidden layers nodes');
+        % Pop-up 1 for training function selection
         pop1 = {'Train Function', 'Scaled Conjugate Gradiant',...
                 'Levenberg-Marquardt', 'Bayesian regularization',...
                 'Gradient Descent'};
         set(handles.pop1tag, 'String', pop1);
+        % Pop-up 2 for Performance /Loss function selection
         pop2 = {'Performance Function', 'crossentropy', 'Sum Absolute Error (L1)', 'Sum Squared Error (L2)'};
         set(handles.pop2tag, 'String', pop2);
     case 2 % SVM
+        % Save model slection type for testing
         Model.type = ind;
+        % Pop-up 1 SVM kernel selection
         pop1 = {'Kernel Function', 'Linear', 'Polynomial', 'RBF', 'Sigmoid'};
         set(handles.pop1tag, 'String', pop1);
+        % Pop-up 2 for type of SVM selection
         pop2 = {'C-SVC', 'nu-SVC', 'one-class SVM', 'epsilon-SVR', 'nu-SVR'};
         set(handles.pop2tag, 'String', pop2);
-
 end
 handles.Model = Model;
 guidata(hObject, handles)
@@ -340,16 +385,19 @@ function pop1tag_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns pop1tag contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from pop1tag
-if get(handles.modeltag, 'Value')-1 == 2
+
+% Behaviour of edit box when SVM model is selected
+if get(handles.modeltag, 'Value')-1 == 2 
     switch get(handles.pop1tag, 'Value')-1
-        case 2
+        case 2 % Polynomial kernel
             set(handles.edit1tag, 'String', 'Polynomial degree');
-        case 3
+        case 3 % RBF Kernel
             set(handles.edit1tag, 'String', 'Gamma value');
-        otherwise
+        otherwise % Linear kernel with slack variable
             set(handles.edit1tag, 'String', 'C value');
     end
 end
+
 % --- Executes during object creation, after setting all properties.
 function pop1tag_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to pop1tag (see GCBO)
@@ -393,18 +441,22 @@ function traintag_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 switch handles.Model.type
     case 1 % ANN
+        % Model selection index from list. 
+        % (-1) to adjust the first entry of dummy text.
         ind = get(handles.targettag, 'Value')-1;
-        if handles.stats.enctype == 2
+        if handles.stats.enctype == 2 % Already one-hot encoded
+            % Extract target data 
             T = cell2mat(handles.data(:, ind));
-        else
+        else % Do one-hot encoding for target
             T = full(ind2vec(cell2mat(handles.data(:, ind))', length(handles.Categories(1, ind))));
         end
-        handles.data(:, ind) = [];
+        handles.data(:, ind) = []; % Remove target from data
+        % Take rest of data as input
         X = cell2mat(handles.data);
         pop1 = {'trainscg', 'trainlm', 'trainbr', 'traingd'};
-        p1 = get(handles.pop1tag, 'Value')-1;
+        p1 = get(handles.pop1tag, 'Value')-1; % Use seleted training function
         pop2 = {'crossentropy', 'sae', 'sse'};
-        p2 = get(handles.pop2tag, 'Value')-1;
+        p2 = get(handles.pop2tag, 'Value')-1; % Use seleted loss function
         net = patternnet(str2num(get(handles.edit1tag, 'String')), pop1{p1}, pop2{p2});
         Model.mdl = train(net, X', T');
         
