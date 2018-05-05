@@ -1,5 +1,16 @@
 function data = t_data_norm(data, CatVar, stats)
-% It is assumed that missing value problem is solved.
+%% Function to normalize testing data according to training data
+% INPUTS: data = Contains the TESTING data (# observations by # features)
+%         CatVar = Boolean flag to identify Categorical variables (1 by #features) 
+%         stats = Normalization object
+%             Contains: normtype = Type of normalization applied
+%                       mu = Mean of numeric variables
+%                       v  = Std. dev. of numeric variables
+%                       m  = Max value of numeric variables
+%                       n  = Min value of numeric variables
+% OUTPUT: data = Normalized test data with numeric value 
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 D = data(:, CatVar == 0);
 stats.type = normtype; 
 switch normtype
@@ -31,3 +42,5 @@ switch normtype
 end
 
 data(:, CatVar == 0) = D;
+
+%% END OF t_data_norm.m

@@ -1,4 +1,11 @@
 function [data, head] = load_data()
+%% Function to load data
+% OUTPUT: data = Cell array of mixed data with numeric and string values
+%         head = cell array of features headers (names)
+%                If headers are not specified in file dummy named are
+%                created.
+        
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 try
     [fname, pname, idx] = uigetfile({'*.csv', 'CSV File';...
                                '*.xls', 'Excel 97-2000';...
@@ -59,3 +66,5 @@ catch
 end
 % Seperate processing allows Catergorical and Numeric variable
 % identification easier
+
+%% END OF load_data.m
